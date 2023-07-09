@@ -3,14 +3,13 @@
 namespace App\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use function Symfony\Component\String\u;
 
 class VinylController extends AbstractController
 {
-    #[Route('/', name: 'app_homepage')]
+    #[Route('/', name: 'app_homepage', methods: ['GET'])]
     public function homepage(): Response
     {
         $tracks = [
@@ -28,19 +27,16 @@ class VinylController extends AbstractController
     }
 
     /**
-     * @param Request $request
      * @param string|null $slug
      * @return Response
      */
-    #[Route('/browse/{slug}')]
-    public function browse(Request $request, string $slug = null): Response
+    #[Route('/browse/{slug}', name: 'app_browse', methods: ['GET'])]
+    public function browse(string $slug = null): Response
     {
-        if ($slug) {
-            $title = 'Genres: ' . u(str_replace('-', ' ', $slug))->title(true);
-        } else {
-            $title = 'All Genres';
-        }
+        $genre = $slug ? u(str_replace('-', ' ', $slug))->title(true) : null;
 
-        return new Response($title, 200);
+        return $this->render('vinyl/browse.html.twig', [
+            'genre' => $genre
+        ]);
     }
 }
