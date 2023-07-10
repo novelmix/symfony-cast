@@ -2,9 +2,14 @@
 
 namespace App\Controller;
 
+use DateTime;
+use Psr\Cache\CacheItemInterface;
+use Psr\Cache\InvalidArgumentException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 use function Symfony\Component\String\u;
 
 class VinylController extends AbstractController
@@ -31,13 +36,22 @@ class VinylController extends AbstractController
 
     /**
      * @param string|null $slug
+     * @param HttpClientInterface $httpClient
+     * @param CacheInterface $cache
      * @return Response
+     * @throws InvalidArgumentException
      */
     #[Route('/browse/{slug}', name: 'app_browse')]
-    public function browse(string $slug = null): Response
+    public function browse(string $slug = null, HttpClientInterface $httpClient, CacheInterface $cache): Response
     {
         $genre = $slug ? u(str_replace('-', ' ', $slug))->title(true) : null;
-        $mixes = $this->getMixes();
+        $mixes = $cache->get('mixes_data', function (CacheItemInterface $cacheItem) use ($httpClient) {
+            $cacheItem->expiresAfter(5);
+            $response = $httpClient->request('GET', 'https://raw.githubusercontent.com/SymfonyCasts/vinyl-mixes/main/mixes.json');
+
+            return $response->toArray();
+        });
+
         return $this->render('vinyl/browse.html.twig', [
             'genre' => $genre,
             'mixes' => $mixes,
@@ -55,19 +69,19 @@ class VinylController extends AbstractController
                 'title' => 'PB & Jams',
                 'trackCount' => 14,
                 'genre' => 'Rock',
-                'createdAt' => new \DateTime('2021-10-02'),
+                'createdAt' => new DateTime('2021-10-02'),
             ],
             [
                 'title' => 'Put a Hex on your Ex',
                 'trackCount' => 8,
                 'genre' => 'Heavy Metal',
-                'createdAt' => new \DateTime('2022-04-28'),
+                'createdAt' => new DateTime('2022-04-28'),
             ],
             [
                 'title' => 'Spice Grills - Summer Tunes',
                 'trackCount' => 10,
                 'genre' => 'Pop',
-                'createdAt' => new \DateTime('2019-06-20'),
+                'createdAt' => new DateTime('2019-06-20'),
             ],
         ];
     }
