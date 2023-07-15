@@ -2,18 +2,28 @@
 
 namespace App\Controller;
 
+use App\Service\MixRepository;
 use DateTime;
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\InvalidArgumentException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Contracts\Cache\CacheInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 use function Symfony\Component\String\u;
 
 class VinylController extends AbstractController
 {
+    /**
+     * @param bool $isDebug
+     * @param MixRepository $mixRepository
+     */
+    public function __construct(
+        private bool $isDebug,
+        private MixRepository $mixRepository
+    )
+    {
+    }
+
     /**
      * @return Response
      */
@@ -36,21 +46,15 @@ class VinylController extends AbstractController
 
     /**
      * @param string|null $slug
-     * @param HttpClientInterface $httpClient
-     * @param CacheInterface $cache
      * @return Response
      * @throws InvalidArgumentException
      */
     #[Route('/browse/{slug}', name: 'app_browse')]
-    public function browse(string $slug = null, HttpClientInterface $httpClient, CacheInterface $cache): Response
+    public function browse(string $slug = null): Response
     {
+        dump($this->isDebug);
         $genre = $slug ? u(str_replace('-', ' ', $slug))->title(true) : null;
-        $mixes = $cache->get('mixes_data', function (CacheItemInterface $cacheItem) use ($httpClient) {
-            $cacheItem->expiresAfter(5);
-            $response = $httpClient->request('GET', 'https://raw.githubusercontent.com/SymfonyCasts/vinyl-mixes/main/mixes.json');
-
-            return $response->toArray();
-        });
+        $mixes = $this->mixRepository->findAll();
 
         return $this->render('vinyl/browse.html.twig', [
             'genre' => $genre,
